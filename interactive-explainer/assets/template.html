@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Order Flow Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one 1080px column; a sticky section bar; diagrams scroll sideways inside their frames on a phone.
+   --z1 to --z4 are the subject's areas; each area keeps its colour in every section. */
+:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --sunk: #eaeef2;
+  --fg: #17212c;
+  --muted: #5a6879;
+  --line: #d2dae3;
+  --z1: #4253c4; --z1-soft: #e7eafc;
+  --z2: #a35a0c; --z2-soft: #fbeedd;
+  --z3: #0f7a6b; --z3-soft: #def3ee;
+  --z4: #b0303b; --z4-soft: #fbe6e8;
+  --ok: #1f7a3a; --bad: #b0303b;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f151c; --surface: #17202a; --sunk: #121a22; --fg: #e3e9f0; --muted: #96a5b6; --line: #2b3946;
+    --z1: #a2aeff; --z1-soft: #20274f; --z2: #f0aa5c; --z2-soft: #3a2911;
+    --z3: #52d3bb; --z3-soft: #0f3430; --z4: #ff8089; --z4-soft: #3d1b20;
+    --ok: #6fd88b; --bad: #ff8089;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f151c; --surface: #17202a; --sunk: #121a22; --fg: #e3e9f0; --muted: #96a5b6; --line: #2b3946;
+  --z1: #a2aeff; --z1-soft: #20274f; --z2: #f0aa5c; --z2-soft: #3a2911;
+  --z3: #52d3bb; --z3-soft: #0f3430; --z4: #ff8089; --z4-soft: #3d1b20;
+  --ok: #6fd88b; --bad: #ff8089;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 64px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; animation: none !important; } }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.6 var(--font-body); }
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 20px; }
+main.wrap { display: grid; gap: 64px; padding-block: 36px 80px; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; line-height: 1.15; text-wrap: balance; }
+h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 800; letter-spacing: -0.01em; }
+h2 { font-size: 26px; font-weight: 700; }
+h3 { font-size: 17px; font-weight: 700; }
+p { margin: 0; max-width: 70ch; }
+code, .mono { font-family: var(--font-mono); font-size: 0.87em; }
+code { background: var(--sunk); border-radius: 4px; padding: 1px 5px; overflow-wrap: anywhere; }
+.eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+section { display: grid; gap: 18px; min-width: 0; }
+.lede { font-size: 17px; color: var(--muted); }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--z1); outline-offset: 2px; }
+
+/* top bar */
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); border-bottom: 1px solid var(--line); }
+.bar .wrap { display: flex; gap: 6px; align-items: center; overflow-x: auto; padding-block: 10px; scrollbar-width: none; }
+.bar .brand { font: 700 14px/1 var(--font-display); margin-right: 12px; white-space: nowrap; }
+.bar a { font-size: 13.5px; color: var(--muted); text-decoration: none; padding: 6px 10px; border-radius: 6px; white-space: nowrap; }
+.bar a:hover { background: var(--sunk); color: var(--fg); }
+
+/* model */
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.fact { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 6px; align-content: start; }
+.fact b { font-family: var(--font-display); font-size: 15px; }
+.fact span { font-size: 13.5px; color: var(--muted); }
+
+/* architecture */
+.arch-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); }
+.arch-legend i { display: inline-block; width: 14px; height: 14px; border-radius: 3px; border: 2px solid var(--z); margin-right: 6px; vertical-align: -2px; }
+.arch-legend i.dash { border: 2px dashed var(--muted); }
+.arch { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
+.frame { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow-x: auto; padding: 10px; }
+.frame svg { display: block; width: 100%; min-width: 900px; height: auto; }
+svg text { font-family: var(--font-body); fill: var(--fg); }
+.zone-r { fill: none; stroke-width: 1.5; stroke-dasharray: 3 4; }
+.zone-t { font: 600 11px var(--font-mono); letter-spacing: .07em; }
+.anode { cursor: pointer; }
+.anode rect { fill: var(--surface); stroke-width: 1.6; transition: opacity .2s, stroke-width .2s; }
+.anode.dashed rect { stroke-dasharray: 6 4; }
+.anode .nt { font: 700 13px var(--font-display); }
+.anode .ns { font-size: 11px; fill: var(--muted); }
+.anode:hover rect, .anode:focus rect { stroke-width: 3; }
+.anode:focus { outline: none; }
+.anode.sel rect { stroke-width: 3.5; }
+.aedge { fill: none; stroke: var(--muted); stroke-width: 1.4; opacity: .45; transition: opacity .2s, stroke .2s; }
+.aedge.dashed { stroke-dasharray: 5 4; }
+.aedge.hi { stroke: var(--z1); stroke-width: 2.6; opacity: 1; }
+.arch-head { fill: var(--muted); }
+.abadge { cursor: pointer; }
+.abadge circle { fill: var(--surface); stroke: var(--muted); stroke-width: 1.3; }
+.abadge text { font: 600 10.5px var(--font-mono); fill: var(--fg); }
+.abadge.hi circle { fill: var(--z1); stroke: var(--z1); }
+.abadge.hi text { fill: var(--surface); }
+#archSvg.focus .anode:not(.peer) { opacity: .28; }
+#archSvg.focus .aedge:not(.hi) { opacity: .08; }
+#archSvg.focus .abadge:not(.hi) { opacity: .2; }
+.arch-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 10px; align-content: start; font-size: 14px; min-width: 0; }
+.arch-panel h3 { font-size: 17px; }
+.arch-panel ul { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 8px; }
+.arch-panel li { display: grid; grid-template-columns: 24px 1fr; gap: 8px; }
+.arch-panel .btn { justify-self: start; }
+.num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--sunk); font: 600 11px var(--font-mono); }
+.arch-list { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px; }
+.arch-list li button { width: 100%; text-align: left; display: grid; grid-template-columns: 24px 1fr; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; cursor: pointer; font-size: 13.5px; }
+.arch-list li button:hover, .arch-list li button.hi { border-color: var(--z1); }
+.arch-list b { display: block; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+
+/* process map */
+.lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.lane { background: var(--sunk); border-radius: 12px; padding: 12px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.lane h3 { font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.lane h3 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+.lane p.hint { font-size: 12.5px; color: var(--muted); }
+.proc { text-align: left; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 8px; padding: 10px 12px; cursor: pointer; display: grid; gap: 2px; transition: transform .12s, box-shadow .12s; }
+.proc:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(0,0,0,.08); }
+.proc[aria-pressed="true"] { background: var(--cs); border-color: var(--c); }
+.proc b { font: 600 14px/1.3 var(--font-body); }
+.proc span { font: 12px/1.3 var(--font-mono); color: var(--muted); overflow-wrap: anywhere; }
+.proc .tag { justify-self: start; font: 600 10.5px/1 var(--font-mono); text-transform: uppercase; letter-spacing: .05em; color: var(--c); margin-top: 3px; }
+.explored { font: 600 13px var(--font-mono); color: var(--muted); }
+.detail { background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--dc, var(--z1)); border-radius: 12px; padding: 22px; display: grid; gap: 18px; min-width: 0; }
+.detail header { display: grid; gap: 6px; }
+.detail .file { font: 13px/1.3 var(--font-mono); color: var(--muted); }
+.detail .grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 22px; }
+.detail h4 { margin: 0 0 8px; font: 600 12px/1 var(--font-mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.detail ol.steps { margin: 0; padding: 0; list-style: none; counter-reset: s; display: grid; gap: 8px; }
+.detail ol.steps li { counter-increment: s; display: grid; grid-template-columns: 28px 1fr; gap: 10px; font-size: 14.5px; }
+.detail ol.steps li::before { content: counter(s); font: 600 12px/26px var(--font-mono); text-align: center; width: 26px; height: 26px; border-radius: 50%; background: var(--sunk); color: var(--fg); }
+.pth { display: inline-block; font: 600 10.5px/1 var(--font-mono); padding: 3px 6px; border-radius: 4px; margin-right: 6px; vertical-align: 1px; background: var(--z2-soft); color: var(--z2); }
+.kv { display: grid; gap: 12px; font-size: 14px; align-content: start; }
+.kv > div { display: grid; gap: 4px; }
+.inputs { display: grid; gap: 4px; font-size: 13.5px; }
+.inputs div { display: grid; grid-template-columns: minmax(110px, auto) 1fr; gap: 10px; padding: 5px 0; border-bottom: 1px dashed var(--line); }
+.inputs div:last-child { border-bottom: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 500 12.5px/1 var(--font-body); padding: 7px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; }
+.chip:hover { border-color: var(--fg); }
+.note { background: var(--sunk); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; }
+
+/* walkthrough */
+.journey { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 16px; min-width: 0; }
+.phases { display: flex; flex-wrap: wrap; gap: 6px; }
+.phase-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+.phase-btn[aria-current="true"] { background: var(--fg); color: var(--surface); border-color: var(--fg); }
+.track { display: flex; gap: 4px; }
+.track button { flex: 1; height: 8px; border: 0; border-radius: 4px; background: var(--line); cursor: pointer; padding: 0; }
+.track button.done { background: var(--z3); }
+.track button.now { background: var(--z1); }
+.stage { overflow-x: auto; }
+.stage svg { display: block; width: 100%; min-width: 760px; height: auto; }
+.actor rect { fill: var(--sunk); stroke: var(--line); stroke-width: 1.5; transition: fill .25s, stroke .25s; }
+.actor.on rect { fill: var(--z1-soft); stroke: var(--z1); stroke-width: 2.5; }
+.actor .an { font: 700 13px var(--font-display); }
+.actor .as { font-size: 11px; fill: var(--muted); }
+.flow-path { fill: none; stroke: var(--z1); stroke-width: 2.5; stroke-dasharray: 7 6; animation: dash 1s linear infinite; }
+@keyframes dash { to { stroke-dashoffset: -26; } }
+.flow-label { font: 600 12px var(--font-mono); fill: var(--z1); }
+.flow-head { fill: var(--z1); }
+.step-text { display: grid; gap: 10px; }
+.step-text .step-num { font: 500 12px var(--font-mono); color: var(--muted); }
+.step-text ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14.5px; }
+.nav { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.btn { border: 1px solid var(--fg); background: var(--fg); color: var(--surface); border-radius: 8px; padding: 8px 14px; font-weight: 600; cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--fg); border-color: var(--line); }
+.btn:disabled { opacity: .4; cursor: default; }
+.nav .hint { font-size: 12.5px; color: var(--muted); }
+
+/* tables */
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 14px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 11.5px/1.3 var(--font-body); color: var(--muted); text-transform: uppercase; letter-spacing: .05em; background: var(--sunk); }
+tr:last-child td { border-bottom: 0; }
+
+/* comparison */
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; padding: 3px; background: var(--surface); gap: 3px; justify-self: start; flex-wrap: wrap; }
+.seg button { border: 0; background: transparent; padding: 7px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--surface); }
+.cmp { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.cmp .cell { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 6px; align-content: start; }
+.cmp .cell h4 { margin: 0; font: 600 12px/1 var(--font-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.cmp .cell p { font-size: 14.5px; }
+
+/* glossary */
+.search { width: 100%; max-width: 420px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: inherit; }
+.terms { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.term { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 4px; align-content: start; }
+.term b { font-family: var(--font-display); }
+.term span { font-size: 14px; }
+.term small { font: 12px var(--font-mono); color: var(--muted); overflow-wrap: anywhere; }
+.empty { color: var(--muted); font-size: 14px; }
+
+/* quiz */
+.quiz { display: grid; gap: 12px; }
+.q { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 10px; }
+.q p.ask { font-weight: 600; }
+.opts { display: grid; gap: 6px; }
+.opt { text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 9px 12px; cursor: pointer; font-size: 14px; }
+.opt:hover:not(:disabled) { border-color: var(--fg); }
+.opt.right { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
+.opt.wrong { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--surface)); }
+.opt:disabled { cursor: default; }
+.why { font-size: 14px; color: var(--muted); }
+.score { font: 600 14px var(--font-mono); }
+
+/* questions and answers */
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0 16px; }
+details + details { margin-top: 8px; }
+summary { cursor: pointer; padding: 13px 0; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+summary::after { content: "+"; font: 500 18px/1 var(--font-mono); color: var(--muted); }
+details[open] summary::after { content: "–"; }
+details > div { padding: 0 0 14px; font-size: 14.5px; display: grid; gap: 8px; }
+details ul { margin: 0; padding-left: 18px; }
+
+footer { color: var(--muted); font-size: 13px; padding-bottom: 40px; }
+
+@media (max-width: 900px) { .detail .grid { grid-template-columns: 1fr; } }
+@media (max-width: 520px) { .wrap { padding-inline: 16px; } .detail { padding: 16px; } }
+</style>
+</head>
+<body>
+<!-- SAMPLE DATA: every text and data object below describes a fictional online shop. Replace all of it. -->
+
+<nav class="bar" aria-label="Sections">
+  <div class="wrap">
+    <span class="brand">Order Flow Guide</span>
+    <a href="#model">Model</a>
+    <a href="#arch">Architecture</a>
+    <a href="#map">Processes</a>
+    <a href="#journey">One order</a>
+    <a href="#compare">Compare</a>
+    <a href="#tables">States</a>
+    <a href="#glossary">Glossary</a>
+    <a href="#quiz">Test</a>
+    <a href="#faq">Questions</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <header id="model" style="display:grid;gap:18px">
+    <div class="eyebrow">Sample subject · ASD-STE100</div>
+    <h1>How an order goes from the cart to the customer</h1>
+    <p class="lede">The shop has three parts. The <b>order</b> part records what the customer buys. The <b>payment</b> part takes the money. The <b>delivery</b> part sends the parcel. Each part has its own service.</p>
+    <div class="facts">
+      <div class="fact"><b>Order</b><span>A record of the items, the address and the total price.</span></div>
+      <div class="fact"><b>Reservation</b><span>Stock that the shop keeps for one order until payment.</span></div>
+      <div class="fact"><b>Payment</b><span>The payment provider takes the money and sends a result to the shop.</span></div>
+      <div class="fact"><b>Shipment</b><span>The parcel and its tracking number from the courier.</span></div>
+    </div>
+  </header>
+
+  <section id="arch">
+    <div class="eyebrow">Components and connections</div>
+    <h2>The architecture</h2>
+    <p>The diagram shows the components and the connections between them. Click a component to see its connections. Click a number to see one connection.</p>
+    <div class="arch-legend" id="archLegend"></div>
+    <div class="arch">
+      <div class="frame">
+        <svg id="archSvg" viewBox="0 0 1120 560" role="img" aria-label="Architecture diagram with numbered connections">
+          <defs><marker id="archHead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="arch-head"/></marker></defs>
+          <g id="archZones"></g>
+          <g id="archEdges"></g>
+          <g id="archNodes"></g>
+          <g id="archBadges"></g>
+        </svg>
+      </div>
+      <aside class="arch-panel" id="archPanel" aria-live="polite"></aside>
+    </div>
+    <ol class="arch-list" id="archList"></ol>
+  </section>
+
+  <section id="map">
+    <div class="eyebrow">Processes</div>
+    <h2>The processes, in sequence</h2>
+    <p>Click a process. The panel shows when it starts, its inputs, its steps, its result and the result of an error.</p>
+    <div class="explored" id="explored"></div>
+    <div class="lanes" id="lanes"></div>
+    <article class="detail" id="detail" aria-live="polite"></article>
+  </section>
+
+  <section id="journey">
+    <div class="eyebrow">One order</div>
+    <h2>One order, step by step</h2>
+    <p>This procedure follows one order. The diagram shows the active components and the item that moves between them. Use the buttons or the arrow keys.</p>
+    <div class="journey">
+      <div class="phases" id="phases"></div>
+      <div class="track" id="track" aria-label="Steps"></div>
+      <div class="stage">
+        <svg id="stage" viewBox="0 0 900 200" role="img" aria-label="The components of the current step and the flow between them">
+          <defs><marker id="head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="flow-head"/></marker></defs>
+          <g id="actors"></g>
+          <g id="flow"></g>
+        </svg>
+      </div>
+      <div class="step-text" id="stepText"></div>
+      <div class="nav">
+        <button class="btn ghost" id="prev">Back</button>
+        <button class="btn" id="next">Next</button>
+        <span class="hint">The arrow keys operate when this panel is visible.</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="compare">
+    <div class="eyebrow">Two variants</div>
+    <h2>The differences between the variants</h2>
+    <div class="seg" role="group" aria-label="Variant" id="seg"></div>
+    <div class="cmp" id="cmp"></div>
+  </section>
+
+  <section id="tables">
+    <div class="eyebrow">Reference</div>
+    <h2>The states of an order</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>State</th><th>Meaning</th><th>Set by</th><th>Next state</th></tr></thead>
+        <tbody>
+          <tr><td><code>placed</code></td><td>The customer sent the order.</td><td>Order service</td><td><code>paid</code> or <code>cancelled</code></td></tr>
+          <tr><td><code>paid</code></td><td>The payment provider accepted the payment.</td><td>Order service, after the payment result</td><td><code>shipped</code></td></tr>
+          <tr><td><code>shipped</code></td><td>The courier has the parcel.</td><td>Warehouse</td><td><code>delivered</code></td></tr>
+          <tr><td><code>cancelled</code></td><td>The order stopped before payment. The stock is free again.</td><td>Order service</td><td>None</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="glossary">
+    <div class="eyebrow">Terms</div>
+    <h2>Glossary</h2>
+    <input class="search" id="q" type="search" placeholder="Filter, for example order, stock" aria-label="Filter the glossary">
+    <div class="terms" id="terms"></div>
+  </section>
+
+  <section id="quiz">
+    <div class="eyebrow">Questions</div>
+    <h2>Test your knowledge</h2>
+    <p>Select an answer to see the reason.</p>
+    <div class="score" id="score"></div>
+    <div class="quiz" id="quizList"></div>
+  </section>
+
+  <section id="faq">
+    <div class="eyebrow">Frequent questions</div>
+    <h2>Questions and answers</h2>
+    <div id="faqList"></div>
+  </section>
+
+  <footer>Source: sample data for a fictional shop. Replace this line with the files and commands that the page facts come from.</footer>
+</main>
+
+<script>
+/* ---------- SAMPLE DATA: replace from here to the renderers ---------- */
+
+const ZONES = [
+  { x: 20, y: 30, w: 260, h: 500, c: "var(--z1)", t: "CUSTOMER" },
+  { x: 300, y: 30, w: 520, h: 500, c: "var(--z3)", t: "SHOP PLATFORM" },
+  { x: 840, y: 30, w: 260, h: 500, c: "var(--muted)", t: "OUTSIDE SERVICES" }
+];
+const NODES = {
+  browser: { x: 40, y: 70, w: 220, h: 70, c: "var(--z1)", t: "Browser", s: "web shop", d: "The customer selects items and sends the order from the web shop." },
+  app: { x: 40, y: 170, w: 220, h: 70, c: "var(--z1)", t: "Mobile app", s: "optional", d: "The mobile app uses the same API as the browser.", dashed: true },
+  web: { x: 320, y: 70, w: 220, h: 70, c: "var(--z3)", t: "Web server", s: "API and pages", d: "It receives each request from the customer and sends it to the correct service." },
+  orders: { x: 320, y: 190, w: 220, h: 80, c: "var(--z3)", t: "Order service", s: "orders and states", d: "It records each order and changes its state." },
+  stock: { x: 580, y: 190, w: 220, h: 80, c: "var(--z3)", t: "Stock service", s: "reservations", d: "It keeps stock for an order until the payment result arrives." },
+  db: { x: 320, y: 320, w: 220, h: 70, c: "var(--z3)", t: "Database", s: "orders, stock", d: "It keeps the orders and the stock levels." },
+  queue: { x: 580, y: 320, w: 220, h: 70, c: "var(--z3)", t: "Message queue", s: "events", d: "It carries events between the services, for example order paid." },
+  warehouse: { x: 450, y: 430, w: 220, h: 70, c: "var(--z2)", t: "Warehouse", s: "pack and ship", d: "The warehouse team packs the parcel when the order is paid." },
+  pay: { x: 860, y: 70, w: 220, h: 70, c: "var(--muted)", t: "Payment provider", s: "card payments", d: "It takes the money and sends the result to the shop." },
+  mail: { x: 860, y: 190, w: 220, h: 70, c: "var(--muted)", t: "Email service", s: "receipts", d: "It sends the receipt and the tracking email." },
+  courier: { x: 860, y: 430, w: 220, h: 70, c: "var(--muted)", t: "Courier", s: "delivery", d: "It collects the parcel and delivers it." }
+};
+const EDGES = [
+  ["browser", "web", "The customer sends the order over HTTPS."],
+  ["app", "web", "The mobile app uses the same API.", true],
+  ["web", "orders", "The web server sends the order to the order service."],
+  ["orders", "stock", "The order service asks for a reservation."],
+  ["orders", "db", "The order service writes the order."],
+  ["stock", "db", "The stock service changes the stock level."],
+  ["web", "pay", "The web server sends the customer to the payment page."],
+  ["pay", "orders", "The payment provider sends the payment result."],
+  ["orders", "queue", "The order service sends the order paid event."],
+  ["queue", "warehouse", "The warehouse receives the event and packs the parcel."],
+  ["warehouse", "courier", "The courier collects the parcel."],
+  ["orders", "mail", "The order service asks for the receipt email."]
+];
+
+const LANES = [
+  { title: "1 · Order", hint: "Record the order", items: ["place", "reserve"] },
+  { title: "2 · Pay", hint: "Take the money", items: ["pay"] },
+  { title: "3 · Deliver", hint: "Send the parcel", items: ["ship"] },
+  { title: "4 · After sale", hint: "Returns and refunds", items: ["refund"] }
+];
+const PROCESSES = {
+  place: { name: "Place an order", file: "order service", what: "The order service records the items, the address and the total price.", when: "The customer clicks Buy.", inputs: [["items", "The products and the quantities."], ["address", "The delivery address."]], steps: ["The web server examines the cart.", "The order service writes the order with the state placed.", "The order service asks the stock service for a reservation."], produces: "An order with the state placed.", fails: "The customer sees an error. The shop does not keep the order.", links: ["reserve", "pay"] },
+  reserve: { name: "Reserve stock", file: "stock service", what: "The stock service keeps the stock for one order.", when: "After the order service writes the order.", inputs: [["order id", "The order to reserve for."]], steps: ["The stock service examines the stock level.", "It decreases the free stock.", "It keeps the reservation for 30 minutes."], produces: "A reservation for the order.", fails: "If the stock is too low, the order changes to cancelled.", links: ["place", "pay"] },
+  pay: { name: "Take the payment", file: "payment provider", what: "The payment provider takes the money from the customer.", when: "After the reservation.", inputs: [["total", "The total price."], ["card", "The card of the customer, on the provider page only."]], steps: [["card", "The customer types the card details on the provider page."], ["wallet", "The customer approves the payment in the wallet app."], "The provider sends the result to the order service.", "The order service changes the state to paid."], produces: "An order with the state paid.", fails: "The reservation stops after 30 minutes, and the order changes to cancelled.", links: ["reserve", "ship"] },
+  ship: { name: "Pack and ship", file: "warehouse", what: "The warehouse packs the parcel and gives it to the courier.", when: "After the order paid event.", inputs: [["order id", "The paid order."]], steps: ["The warehouse receives the order paid event.", "The team packs the parcel.", "The courier collects the parcel and gives a tracking number.", "The order service changes the state to shipped."], produces: "A shipped order and a tracking number.", fails: "The order stays paid. The team examines it on the next day.", links: ["pay", "refund"], isNew: true },
+  refund: { name: "Refund", file: "order service", what: "The shop gives the money back to the customer.", when: "The customer returns the parcel.", inputs: [["order id", "The returned order."]], steps: ["The warehouse examines the returned items.", "The order service asks the provider for the refund.", "The email service sends a refund email."], produces: "A refunded order.", fails: "The support team does the refund manually.", links: ["ship"] }
+};
+
+const ACTORS = [
+  ["Customer", "browser or app"],
+  ["Web server", "API"],
+  ["Order service", "orders"],
+  ["Payment", "provider"],
+  ["Warehouse", "pack and ship"],
+  ["Courier", "delivery"]
+];
+const STEPS = [
+  { ph: "Order", from: 0, to: 1, label: "send order", t: "The customer sends the order", b: ["The customer clicks Buy.", "The browser sends the cart to the web server."] },
+  { ph: "Order", from: 1, to: 2, label: "write order", t: "The order service records the order", b: ["The order service writes the order with the state placed.", "It asks the stock service for a reservation."] },
+  { ph: "Pay", from: 0, to: 3, label: "pay", t: "The customer pays", b: ["The customer types the card details on the provider page.", "The shop does not receive the card number."] },
+  { ph: "Pay", from: 3, to: 2, label: "payment result", t: "The provider sends the result", b: ["The order service changes the state to paid.", "It sends the order paid event."] },
+  { ph: "Deliver", from: 2, to: 4, label: "order paid event", t: "The warehouse packs the parcel", b: ["The warehouse receives the event.", "The team packs the parcel."] },
+  { ph: "Deliver", from: 4, to: 5, label: "parcel", t: "The courier collects the parcel", b: ["The courier gives a tracking number.", "The order service changes the state to shipped."] },
+  { ph: "Deliver", from: 5, to: 0, label: "delivery", t: "The customer receives the parcel", b: ["The courier delivers the parcel.", "The order changes to delivered."] }
+];
+
+const CMP = {
+  "Guest order": [
+    ["Sign-in", "Not necessary. The customer gives an email address."],
+    ["Address", "The customer types it for each order."],
+    ["Order history", "Only in the receipt emails."]
+  ],
+  "Account order": [
+    ["Sign-in", "Necessary before the payment."],
+    ["Address", "The shop keeps it in the account."],
+    ["Order history", "In the account pages."]
+  ]
+};
+
+const TERMS = [
+  ["Order", "A record of the items, the address and the total price.", "order service"],
+  ["Reservation", "Stock that the shop keeps for one order for 30 minutes.", "stock service"],
+  ["Payment result", "The message from the provider that tells if the payment is accepted.", "payment provider"],
+  ["Event", "A message on the queue that tells other services that a change occurred.", "message queue"],
+  ["Tracking number", "The number from the courier that shows where the parcel is.", "courier"]
+];
+
+const QUIZ = [
+  ["When does the stock service decrease the free stock?", ["When the customer opens the shop", "When the order service asks for a reservation", "After the delivery", "After the refund"], 1, "The reservation decreases the free stock. It occurs after the order service writes the order."],
+  ["Which component receives the card number?", ["The web server", "The order service", "The payment provider", "The database"], 2, "The customer types the card details on the provider page. The shop does not receive the card number."],
+  ["What occurs if the customer does not pay in 30 minutes?", ["The shop keeps the stock", "The order changes to cancelled", "The courier collects the parcel", "The shop sends a refund"], 1, "The reservation stops after 30 minutes. Then the order changes to cancelled."]
+];
+
+const FAQ = [
+  ["Can a customer change the address after payment?", ["No. Contact the support team before the parcel is shipped."]],
+  ["Where does the tracking number come from?", ["The courier gives it when it collects the parcel.", "The email service sends it to the customer."]]
+];
+
+/* ---------- renderers: keep ---------- */
+
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const codeify = s => esc(s).replace(/\b([a-z0-9_.\-]+\/[a-z0-9_.\-\/<>&;]+|[a-z_]+\.(?:py|js|ts|yml|yaml|toml|json|md))/gi, m => `<code>${m}</code>`);
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const keyActivate = (el, fn) => { el.addEventListener("click", fn); el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fn(); } }); };
+
+/* architecture */
+function anchor(n, tx, ty) {
+  const cx = n.x + n.w / 2, cy = n.y + n.h / 2, dx = tx - cx, dy = ty - cy;
+  const sx = dx === 0 ? Infinity : (n.w / 2) / Math.abs(dx), sy = dy === 0 ? Infinity : (n.h / 2) / Math.abs(dy);
+  const s = Math.min(sx, sy);
+  return [cx + dx * s, cy + dy * s];
+}
+const insideAny = (x, y) => Object.values(NODES).some(n => x > n.x - 12 && x < n.x + n.w + 12 && y > n.y - 12 && y < n.y + n.h + 12);
+function drawArch() {
+  document.getElementById("archLegend").innerHTML = ZONES.map(z => `<span><i style="--z:${z.c}"></i>${esc(z.t.charAt(0) + z.t.slice(1).toLowerCase())}</span>`).join("")
+    + `<span><i class="dash"></i>Optional or one variant only</span>`;
+  document.getElementById("archZones").innerHTML = ZONES.map(z =>
+    `<rect class="zone-r" x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="12" style="stroke:${z.c}"/>
+     <text class="zone-t" x="${z.x + 12}" y="${z.y + 18}" style="fill:${z.c}">${esc(z.t)}</text>`).join("");
+  document.getElementById("archNodes").innerHTML = Object.entries(NODES).map(([k, n]) =>
+    `<g class="anode${n.dashed ? " dashed" : ""}" data-n="${k}" tabindex="0" role="button" aria-label="${esc(n.t)}">
+       <rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="9" style="stroke:${n.c}"/>
+       <text class="nt" x="${n.x + 12}" y="${n.y + 24}">${esc(n.t)}</text>
+       <text class="ns" x="${n.x + 12}" y="${n.y + 42}">${esc(n.s)}</text>
+     </g>`).join("");
+  let edges = "", badges = "";
+  const placed = [];
+  EDGES.forEach(([a, b, , dashed], i) => {
+    const A = NODES[a], B = NODES[b];
+    const [x1, y1] = anchor(A, B.x + B.w / 2, B.y + B.h / 2), [x2, y2] = anchor(B, A.x + A.w / 2, A.y + A.h / 2);
+    edges += `<line class="aedge${dashed ? " dashed" : ""}" data-e="${i}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" marker-end="url(#archHead)"/>`;
+    // Three passes: clear of nodes and far from other badges, then nearer, then clear of nodes only.
+    const ts = [0.5]; for (let k = 1; k <= 19; k++) ts.push(0.5 - k * 0.025, 0.5 + k * 0.025);
+    const at = t => [x1 + (x2 - x1) * t, y1 + (y2 - y1) * t];
+    const free = (px, py, gap) => !insideAny(px, py) && !placed.some(([qx, qy]) => Math.hypot(qx - px, qy - py) < gap);
+    const [bx, by] = [24, 17, 0].map(gap => ts.map(at).find(([px, py]) => free(px, py, gap))).find(Boolean) || at(0.5);
+    placed.push([bx, by]);
+    badges += `<g class="abadge" data-e="${i}" tabindex="0" role="button" aria-label="Connection ${i + 1}"><circle cx="${bx}" cy="${by}" r="10"/><text x="${bx}" y="${by + 3.6}" text-anchor="middle">${i + 1}</text></g>`;
+  });
+  document.getElementById("archEdges").innerHTML = edges;
+  document.getElementById("archBadges").innerHTML = badges;
+  document.querySelectorAll(".anode").forEach(g => keyActivate(g, () => focusNode(g.dataset.n)));
+  document.querySelectorAll(".abadge").forEach(g => keyActivate(g, () => focusEdge(+g.dataset.e)));
+  document.getElementById("archList").innerHTML = EDGES.map(([a, b, d], i) =>
+    `<li><button data-e="${i}"><span class="num">${i + 1}</span><span><b>${esc(NODES[a].t)} → ${esc(NODES[b].t)}</b>${codeify(d)}</span></button></li>`).join("");
+  document.querySelectorAll("#archList button").forEach(b => b.addEventListener("click", () => { focusEdge(+b.dataset.e); document.getElementById("archSvg").scrollIntoView({ block: "nearest" }); }));
+  resetArch();
+}
+function mark(edgeIdx) {
+  document.getElementById("archSvg").classList.toggle("focus", edgeIdx.length > 0);
+  const peers = new Set();
+  edgeIdx.forEach(i => { peers.add(EDGES[i][0]); peers.add(EDGES[i][1]); });
+  document.querySelectorAll(".aedge, .abadge, #archList button").forEach(el => el.classList.toggle("hi", edgeIdx.includes(+el.dataset.e)));
+  document.querySelectorAll(".anode").forEach(el => el.classList.toggle("peer", peers.has(el.dataset.n)));
+}
+function archPanel(html) {
+  document.getElementById("archPanel").innerHTML = html + `<button class="btn ghost" id="archReset">Show all connections</button>`;
+  document.getElementById("archReset").addEventListener("click", resetArch);
+}
+function focusNode(k) {
+  const idx = EDGES.map((e, i) => (e[0] === k || e[1] === k) ? i : -1).filter(i => i >= 0);
+  mark(idx);
+  document.querySelectorAll(".anode").forEach(el => el.classList.toggle("sel", el.dataset.n === k));
+  const n = NODES[k];
+  archPanel(`<h3>${esc(n.t)}</h3><p>${codeify(n.d)}</p><ul>${idx.map(i => `<li><span class="num">${i + 1}</span><span>${codeify(EDGES[i][2])}</span></li>`).join("")}</ul>`);
+}
+function focusEdge(i) {
+  mark([i]);
+  document.querySelectorAll(".anode").forEach(el => el.classList.remove("sel"));
+  const [a, b, d] = EDGES[i];
+  archPanel(`<h3><span class="num">${i + 1}</span> ${esc(NODES[a].t)} → ${esc(NODES[b].t)}</h3><p>${codeify(d)}</p>`);
+}
+function resetArch() {
+  mark([]);
+  document.querySelectorAll(".anode").forEach(el => el.classList.remove("sel"));
+  document.getElementById("archPanel").innerHTML = `<h3>All connections</h3>
+    <p>Each arrow points from the component that starts the connection. A dashed item is optional or for one variant only.</p>
+    <p>Click a component or a number to see the details.</p>`;
+}
+
+/* process map, with an exploration counter */
+const seen = new Set((store.get("ex-seen") || "").split(",").filter(k => PROCESSES[k]));
+function renderLanes() {
+  document.getElementById("lanes").innerHTML = LANES.map((l, li) => {
+    const c = `--c:var(--z${(li % 4) + 1});--cs:var(--z${(li % 4) + 1}-soft)`;
+    return `<div class="lane" style="${c}">
+      <h3><span class="dot"></span>${esc(l.title)}</h3><p class="hint">${esc(l.hint)}</p>
+      ${l.items.map(k => { const p = PROCESSES[k]; return `<button class="proc" data-p="${k}" aria-pressed="false" style="${c}">
+        <b>${esc(p.name)}</b><span>${esc(p.file)}</span>${p.isNew ? '<span class="tag">new</span>' : ""}</button>`; }).join("")}
+    </div>`;
+  }).join("");
+  document.querySelectorAll(".proc").forEach(b => b.addEventListener("click", () => selectProcess(b.dataset.p, true)));
+}
+function selectProcess(key, scroll) {
+  const p = PROCESSES[key];
+  const btn = document.querySelector(`.proc[data-p="${key}"]`);
+  document.querySelectorAll(".proc").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.p === key)));
+  const d = document.getElementById("detail");
+  d.style.setProperty("--dc", getComputedStyle(btn).getPropertyValue("--c"));
+  const steps = p.steps.map(s => Array.isArray(s)
+    ? `<li><span><span class="pth">${esc(s[0])}</span>${codeify(s[1])}</span></li>`
+    : `<li><span>${codeify(s)}</span></li>`).join("");
+  d.innerHTML = `<header><div class="file">${esc(p.file)}</div><h3 style="font-size:22px">${esc(p.name)}</h3><p>${codeify(p.what)}</p></header>
+    <div class="grid">
+      <div><h4>Steps</h4><ol class="steps">${steps}</ol>${p.note ? `<p class="note" style="margin-top:12px">${codeify(p.note)}</p>` : ""}</div>
+      <div class="kv">
+        <div><h4>When it starts</h4><p>${codeify(p.when)}</p></div>
+        <div><h4>Inputs</h4><div class="inputs">${p.inputs.map(([k, v]) => `<div><code>${esc(k)}</code><span>${codeify(v)}</span></div>`).join("")}</div></div>
+        <div><h4>Result</h4><p>${codeify(p.produces)}</p></div>
+        <div><h4>If an error occurs</h4><p>${codeify(p.fails)}</p></div>
+        <div><h4>Related processes</h4><div class="chips">${p.links.map(l => `<button class="chip" data-go="${l}">${esc(PROCESSES[l].name)}</button>`).join("")}</div></div>
+      </div>
+    </div>`;
+  d.querySelectorAll("[data-go]").forEach(c => c.addEventListener("click", () => selectProcess(c.dataset.go, true)));
+  if (scroll) d.scrollIntoView({ block: "nearest" });
+  if (scroll) {
+    seen.add(key);
+    store.set("ex-seen", [...seen].join(","));
+    store.set("ex-last", key);
+  }
+  const total = Object.keys(PROCESSES).length;
+  document.getElementById("explored").textContent = `Explored ${seen.size} of ${total} processes${seen.size === total ? " · all explored" : ""}`;
+}
+
+/* walkthrough */
+let cur = 0;
+const AX = i => 80 + i * 148;
+function drawStep() {
+  const s = STEPS[cur];
+  ACTORS.forEach((_, i) => document.getElementById("actor" + i).classList.toggle("on", i === s.from || i === s.to));
+  const f = document.getElementById("flow");
+  if (s.from === s.to) {
+    const x = AX(s.from);
+    f.innerHTML = `<path class="flow-path" d="M${x - 30},110 C${x - 50},50 ${x + 50},50 ${x + 30},110" marker-end="url(#head)"/><text class="flow-label" x="${x}" y="44" text-anchor="middle">${esc(s.label)}</text>`;
+  } else {
+    const x1 = AX(s.from), x2 = AX(s.to), mx = (x1 + x2) / 2, lift = Math.max(24, 92 - Math.abs(x2 - x1) / 10);
+    f.innerHTML = `<path class="flow-path" d="M${x1},110 Q${mx},${lift - 30} ${x2},110" marker-end="url(#head)"/><text class="flow-label" x="${mx}" y="${Math.max(16, lift - 2)}" text-anchor="middle">${esc(s.label)}</text>`;
+  }
+  document.getElementById("stepText").innerHTML = `<div class="step-num">Step ${cur + 1} of ${STEPS.length} · ${esc(s.ph)}</div><h3>${esc(s.t)}</h3><ul>${s.b.map(x => `<li>${codeify(x)}</li>`).join("")}</ul>`;
+  document.querySelectorAll("#track button").forEach((b, i) => { b.className = i < cur ? "done" : i === cur ? "now" : ""; b.setAttribute("aria-current", String(i === cur)); });
+  document.querySelectorAll(".phase-btn").forEach(b => b.setAttribute("aria-current", String(b.dataset.ph === s.ph)));
+  document.getElementById("prev").disabled = cur === 0;
+  document.getElementById("next").textContent = cur === STEPS.length - 1 ? "Start again" : "Next";
+}
+function initJourney() {
+  document.getElementById("actors").innerHTML = ACTORS.map(([n, s], i) => `<g class="actor" id="actor${i}"><rect x="${AX(i) - 66}" y="112" width="132" height="64" rx="10"/><text class="an" x="${AX(i)}" y="140" text-anchor="middle">${esc(n)}</text><text class="as" x="${AX(i)}" y="160" text-anchor="middle">${esc(s)}</text></g>`).join("");
+  document.getElementById("phases").innerHTML = [...new Set(STEPS.map(s => s.ph))].map(p => `<button class="phase-btn" data-ph="${esc(p)}">${esc(p)}</button>`).join("");
+  document.querySelectorAll(".phase-btn").forEach(b => b.addEventListener("click", () => { cur = STEPS.findIndex(s => s.ph === b.dataset.ph); drawStep(); }));
+  document.getElementById("track").innerHTML = STEPS.map((s, i) => `<button aria-label="Step ${i + 1}: ${esc(s.t)}"></button>`).join("");
+  document.querySelectorAll("#track button").forEach((b, i) => b.addEventListener("click", () => { cur = i; drawStep(); }));
+  document.getElementById("prev").addEventListener("click", () => { if (cur > 0) { cur--; drawStep(); } });
+  document.getElementById("next").addEventListener("click", () => { cur = cur === STEPS.length - 1 ? 0 : cur + 1; drawStep(); });
+  let inView = false;
+  new IntersectionObserver(es => es.forEach(e => inView = e.isIntersecting), { threshold: 0.4 }).observe(document.querySelector(".journey"));
+  document.addEventListener("keydown", e => {
+    if (!inView || e.target.matches("input")) return;
+    if (e.key === "ArrowRight") { cur = Math.min(STEPS.length - 1, cur + 1); drawStep(); }
+    if (e.key === "ArrowLeft") { cur = Math.max(0, cur - 1); drawStep(); }
+  });
+  drawStep();
+}
+
+/* comparison */
+function initCompare() {
+  const kinds = Object.keys(CMP);
+  document.getElementById("seg").innerHTML = kinds.map((k, i) => `<button data-k="${esc(k)}" aria-pressed="${i === 0}">${esc(k)}</button>`).join("");
+  document.querySelectorAll("#seg button").forEach(b => b.addEventListener("click", () => showCmp(b.dataset.k)));
+  showCmp(kinds[0]);
+}
+function showCmp(kind) {
+  document.querySelectorAll("#seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.k === kind)));
+  document.getElementById("cmp").innerHTML = CMP[kind].map(([h, p]) => `<div class="cell"><h4>${esc(h)}</h4><p>${codeify(p)}</p></div>`).join("");
+}
+
+/* glossary */
+function renderTerms(filter) {
+  const f = (filter || "").trim().toLowerCase();
+  const list = TERMS.filter(([a, b, c]) => !f || (a + b + c).toLowerCase().includes(f));
+  document.getElementById("terms").innerHTML = list.length
+    ? list.map(([a, b, c]) => `<div class="term"><b>${esc(a)}</b><span>${codeify(b)}</span><small>${esc(c)}</small></div>`).join("")
+    : `<p class="empty">No term agrees with “${esc(filter)}”. Use a shorter word.</p>`;
+}
+
+/* quiz */
+let answered = 0, right = 0;
+function renderQuiz() {
+  const score = () => document.getElementById("score").textContent = `${answered} of ${QUIZ.length} answered · ${right} correct`;
+  document.getElementById("quizList").innerHTML = QUIZ.map(([q, opts], i) => `<div class="q" id="q${i}"><p class="ask">${i + 1}. ${codeify(q)}</p>
+    <div class="opts">${opts.map((o, j) => `<button class="opt" data-q="${i}" data-o="${j}">${codeify(o)}</button>`).join("")}</div><p class="why" hidden></p></div>`).join("");
+  document.querySelectorAll(".opt").forEach(b => b.addEventListener("click", () => {
+    const qi = +b.dataset.q, oi = +b.dataset.o, [, , ans, why] = QUIZ[qi], box = document.getElementById("q" + qi);
+    box.querySelectorAll(".opt").forEach((x, j) => { x.disabled = true; if (j === ans) x.classList.add("right"); });
+    if (oi !== ans) b.classList.add("wrong"); else right++;
+    answered++;
+    const w = box.querySelector(".why"); w.hidden = false; w.innerHTML = (oi === ans ? "<b>Correct.</b> " : "<b>Incorrect.</b> ") + codeify(why);
+    score();
+  }));
+  score();
+}
+
+/* questions and answers */
+function renderFaq() {
+  document.getElementById("faqList").innerHTML = FAQ.map(([q, a]) => `<details><summary>${esc(q)}</summary><div><ul>${a.map(x => `<li>${codeify(x)}</li>`).join("")}</ul></div></details>`).join("");
+}
+
+drawArch();
+renderLanes();
+selectProcess(PROCESSES[store.get("ex-last")] ? store.get("ex-last") : Object.keys(PROCESSES)[0], false);
+initJourney();
+initCompare();
+renderTerms("");
+document.getElementById("q").addEventListener("input", e => renderTerms(e.target.value));
+renderQuiz();
+renderFaq();
+</script>
+</body>
+</html>
